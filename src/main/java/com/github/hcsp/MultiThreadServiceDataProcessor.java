@@ -1,17 +1,14 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
-    final AtomicBoolean result = new AtomicBoolean(true);
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -30,14 +27,7 @@ public class MultiThreadServiceDataProcessor {
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> {
-                    try {
-                        dataGroup.forEach(remoteService::processData);
-                    } catch (Exception e) {
-                        result.set(false);
-                    }
-                });
-
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
                 thread.start();
                 threads.add(thread);
             }
@@ -45,9 +35,9 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return result.get();
+            return true;
         } catch (Exception e) {
-            return result.get();
+            return false;
         }
     }
 }
