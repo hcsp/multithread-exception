@@ -3,12 +3,22 @@ package com.github.hcsp;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 这个类的bug来源于多线程对异常的处理机制。
+ * 某一个子线程出现了异常但是没有被捕获的话不会被外面的主线程捕获到，从而造成异常逃逸。
+ *
+ * 解决方法;
+ *   使用Thread.setUncaughtExceptionHandler(),从外部捕获逃逸出来的异常。
+ */
 public class MultiThreadServiceDataProcessor {
     // 线程数量
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
+    // 处理次数
+    private final AtomicInteger resultCount = new AtomicInteger();
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -28,16 +38,24 @@ public class MultiThreadServiceDataProcessor {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
                 Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                // 捕获到了任何异常就代表本次处理失败
+                thread.setUncaughtExceptionHandler((t, e) -> {
+                    System.out.println("线程<" + t.getName() + ">处理任务失败，catch：" + e.getMessage());
+                    resultCount.decrementAndGet();
+                });
                 thread.start();
                 threads.add(thread);
             }
 
             for (Thread thread : threads) {
                 thread.join();
+                resultCount.incrementAndGet();
             }
-            return true;
+
         } catch (Exception e) {
-            return false;
+            e.printStackTrace();
+            resultCount.decrementAndGet();
         }
+        return resultCount.get() == allData.size();
     }
 }
