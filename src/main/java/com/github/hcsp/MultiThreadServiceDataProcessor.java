@@ -3,12 +3,15 @@ package com.github.hcsp;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
+    // 所有数据处理成功标志位
+    private boolean dataHandleSuccess = true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -27,7 +30,13 @@ public class MultiThreadServiceDataProcessor {
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                Thread thread = new Thread(() -> dataGroup.forEach(data -> {
+                    try {
+                        remoteService.processData(data);
+                    } catch (Exception e) {
+                        dataHandleSuccess  = false;
+                    }
+                }));
                 thread.start();
                 threads.add(thread);
             }
@@ -35,9 +44,9 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return true;
         } catch (Exception e) {
-            return false;
+            dataHandleSuccess = false;
         }
+        return dataHandleSuccess;
     }
 }
