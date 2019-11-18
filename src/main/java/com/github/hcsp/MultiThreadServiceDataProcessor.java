@@ -1,6 +1,7 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +10,8 @@ public class MultiThreadServiceDataProcessor {
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
+
+    private boolean hasExcepton;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -24,20 +27,26 @@ public class MultiThreadServiceDataProcessor {
                         : allData.size() / threadNumber + 1;
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
 
-        try {
-            List<Thread> threads = new ArrayList<>();
-            for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
-                thread.start();
-                threads.add(thread);
-            }
-
-            for (Thread thread : threads) {
-                thread.join();
-            }
-            return true;
-        } catch (Exception e) {
-            return false;
+        List<Thread> threads = new ArrayList<>();
+        for (List<Object> dataGroup : dataGroups) {
+            Thread thread = new Thread(() -> {
+                try {
+                    dataGroup.forEach(remoteService::processData);
+                } catch (Exception e) {
+                    hasExcepton = true;
+                }
+            });
+            thread.start();
+            threads.add(thread);
         }
+
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return !hasExcepton;
     }
 }
