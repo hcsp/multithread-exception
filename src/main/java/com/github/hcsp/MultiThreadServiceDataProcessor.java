@@ -1,6 +1,7 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +10,8 @@ public class MultiThreadServiceDataProcessor {
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
+    // 线程异常状态，使用volatile保证该变量的可见性
+    private volatile boolean isException = true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -27,7 +30,15 @@ public class MultiThreadServiceDataProcessor {
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                // 线程的异常要从线程内部捕获，主线程无法捕获new Thread()类中的异常
+                Thread thread = new Thread(() -> {
+                    try {
+                        dataGroup.forEach(remoteService::processData);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        isException = false;
+                    }
+                });
                 thread.start();
                 threads.add(thread);
             }
@@ -35,9 +46,9 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return true;
+            return isException;
         } catch (Exception e) {
-            return false;
+            return isException;
         }
     }
 }
