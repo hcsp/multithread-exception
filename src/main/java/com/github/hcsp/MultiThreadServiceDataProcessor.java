@@ -10,8 +10,8 @@ public class MultiThreadServiceDataProcessor {
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
-    // 线程异常状态
-    private boolean isError = true;
+    // 线程异常状态，使用volatile保证该变量的可见性
+    private volatile boolean isException = true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -36,7 +36,7 @@ public class MultiThreadServiceDataProcessor {
                         dataGroup.forEach(remoteService::processData);
                     } catch (Exception e) {
                         e.printStackTrace();
-                        isError = false;
+                        isException = false;
                     }
                 });
                 thread.start();
@@ -46,9 +46,9 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return isError;
+            return isException;
         } catch (Exception e) {
-            return isError;
+            return isException;
         }
     }
 }
