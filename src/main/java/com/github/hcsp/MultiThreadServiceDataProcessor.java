@@ -10,7 +10,7 @@ public class MultiThreadServiceDataProcessor {
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
-    private static volatile boolean endFlag = true;
+    private volatile boolean endFlag = true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -45,9 +45,9 @@ public class MultiThreadServiceDataProcessor {
                 thread.join();
             }
 
-            return endFlag;
+            return this.endFlag;
         } catch (Exception e) {
-            return endFlag;
+            return this.endFlag;
         }
     }
 }
