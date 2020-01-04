@@ -1,8 +1,10 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -18,16 +20,27 @@ public class MultiThreadServiceDataProcessor {
     // 将所有数据发送至远程服务处理。若所有数据都处理成功（没有任何异常抛出），返回true；
     // 否则只要有任何异常产生，返回false
     public boolean processAllData(List<Object> allData) {
+        // 确定组大小
         int groupSize =
                 allData.size() % threadNumber == 0
                         ? allData.size() / threadNumber
                         : allData.size() / threadNumber + 1;
+        // 分组[1,2,3,4,5] 每组2个 则--> [[1, 2], [3, 4], [5]]
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
 
         try {
             List<Thread> threads = new ArrayList<>();
+            AtomicBoolean flag = new AtomicBoolean(true);
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                Thread thread = new Thread(() ->
+                        dataGroup.forEach( data -> {
+                            try {
+                                remoteService.processData(data);
+                            } catch (Exception ignored) {
+                                flag.set(false);
+                            }
+                        })
+                );
                 thread.start();
                 threads.add(thread);
             }
@@ -35,7 +48,7 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return true;
+            return flag.get();
         } catch (Exception e) {
             return false;
         }
