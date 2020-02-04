@@ -10,6 +10,8 @@ public class MultiThreadServiceDataProcessor {
     // 处理数据的远程服务
     private final RemoteService remoteService;
 
+    private volatile boolean occurException = false;
+
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
         this.remoteService = remoteService;
@@ -28,6 +30,7 @@ public class MultiThreadServiceDataProcessor {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
                 Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                thread.setUncaughtExceptionHandler((t, e) -> occurException = true);
                 thread.start();
                 threads.add(thread);
             }
@@ -35,7 +38,7 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return true;
+            return !occurException;
         } catch (Exception e) {
             return false;
         }
