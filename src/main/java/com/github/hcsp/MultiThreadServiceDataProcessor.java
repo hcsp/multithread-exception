@@ -1,9 +1,8 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
-
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -26,8 +25,15 @@ public class MultiThreadServiceDataProcessor {
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
 
         try {
+            List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Executors.callable(() -> dataGroup.forEach(remoteService::processData)).call();
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                thread.start();
+                threads.add(thread);
+            }
+
+            for (Thread thread : threads) {
+                thread.join();
             }
             return true;
         } catch (Exception e) {
