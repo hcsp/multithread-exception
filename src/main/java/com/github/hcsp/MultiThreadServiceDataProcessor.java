@@ -3,12 +3,15 @@ package com.github.hcsp;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
+    //全局共享状态值，否则线程内异常状态不可监控
+    private volatile boolean isError=true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -27,7 +30,16 @@ public class MultiThreadServiceDataProcessor {
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                Thread thread = new Thread(() -> {
+                    for ( Object obj : dataGroup ){
+                        try {
+                            remoteService.processData(obj);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                            isError=false;
+                        }
+                    }
+                });
                 thread.start();
                 threads.add(thread);
             }
@@ -35,7 +47,7 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return true;
+            return isError;
         } catch (Exception e) {
             return false;
         }
