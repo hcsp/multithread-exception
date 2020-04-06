@@ -1,10 +1,8 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -25,29 +23,17 @@ public class MultiThreadServiceDataProcessor {
                         ? allData.size() / threadNumber
                         : allData.size() / threadNumber + 1;
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
-        List<Exception> exceptionInOtherThread = new CopyOnWriteArrayList<>();
+
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> {
-                    try {
-                        dataGroup.forEach(remoteService::processData);
-                    } catch (Exception e) {
-                        exceptionInOtherThread.add(e);
-                    }
-                });
-
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
                 thread.start();
                 threads.add(thread);
             }
 
             for (Thread thread : threads) {
                 thread.join();
-            }
-            if (!exceptionInOtherThread.isEmpty()) {
-                StringBuilder exceptionMsg = new StringBuilder();
-                exceptionInOtherThread.forEach(e -> exceptionMsg.append(e.getMessage()));
-                throw new IllegalStateException(exceptionMsg.toString());
             }
             return true;
         } catch (Exception e) {
