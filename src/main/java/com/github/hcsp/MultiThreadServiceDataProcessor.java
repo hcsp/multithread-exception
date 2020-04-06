@@ -9,8 +9,6 @@ public class MultiThreadServiceDataProcessor {
     private final int threadNumber;
     // 处理数据的远程服务
     private final RemoteService remoteService;
-    //全局共享状态值，否则线程内异常状态不可监控
-    private volatile boolean isError=true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -29,15 +27,7 @@ public class MultiThreadServiceDataProcessor {
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> {
-                    for ( Object obj : dataGroup ){
-                        try {
-                            remoteService.processData(obj);
-                        }catch (Exception e){
-                            isError=false;
-                        }
-                    }
-                });
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
                 thread.start();
                 threads.add(thread);
             }
@@ -45,7 +35,7 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return isError;
+            return true;
         } catch (Exception e) {
             return false;
         }
