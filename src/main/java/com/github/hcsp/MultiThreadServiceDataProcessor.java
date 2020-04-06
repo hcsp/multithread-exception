@@ -35,7 +35,7 @@ public class MultiThreadServiceDataProcessor {
                         try {
                             remoteService.processData(obj);
                         }catch (Exception e){
-                            e.printStackTrace();
+//                            e.printStackTrace();
                             isError=false;
                         }
                     }
