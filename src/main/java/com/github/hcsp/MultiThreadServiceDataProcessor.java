@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -11,7 +12,6 @@ public class MultiThreadServiceDataProcessor {
     // 处理数据的远程服务
     private final RemoteService remoteService;
 
-    private volatile boolean flag = true;
 
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
@@ -27,11 +27,20 @@ public class MultiThreadServiceDataProcessor {
                         ? allData.size() / threadNumber
                         : allData.size() / threadNumber + 1;
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
+        List<Exception> exceptionInOtherThread = new CopyOnWriteArrayList<>();
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
-                thread.setUncaughtExceptionHandler(new MyUncaughtExceptionHandler());
+                Thread thread = new Thread(() -> {
+                    for (Object o : dataGroup) {
+                        try {
+                            remoteService.processData(o);
+                        } catch (Exception e) {
+                            exceptionInOtherThread.add(e);
+                        }
+
+                    }
+                });
 
                 thread.start();
                 threads.add(thread);
@@ -40,17 +49,15 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return this.flag;
+            if (!exceptionInOtherThread.isEmpty()) {
+                StringBuilder exceptionMsg = new StringBuilder();
+                exceptionInOtherThread.forEach(e -> exceptionMsg.append(e.getMessage()));
+                throw new IllegalStateException(exceptionMsg.toString());
+            }
+            return true;
         } catch (Exception e) {
-            return this.flag;
+            return false;
         }
     }
 
-    class MyUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {
-        @Override
-        public void uncaughtException(Thread t, Throwable e) {
-            System.out.println("catch Exception:  " + e);
-            flag = false;
-        }
-    }
 }
