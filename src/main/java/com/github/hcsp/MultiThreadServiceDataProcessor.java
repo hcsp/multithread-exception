@@ -3,7 +3,6 @@ package com.github.hcsp;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -25,18 +24,10 @@ public class MultiThreadServiceDataProcessor {
                         : allData.size() / threadNumber + 1;
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
 
-        AtomicBoolean selfPass = new AtomicBoolean(true);
-
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() ->{
-                    try {
-                        dataGroup.forEach(remoteService::processData);
-                    }catch (Exception e){
-                        selfPass.set(false);
-                    }
-                });
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
                 thread.start();
                 threads.add(thread);
             }
@@ -44,9 +35,9 @@ public class MultiThreadServiceDataProcessor {
             for (Thread thread : threads) {
                 thread.join();
             }
-            return selfPass.get();
+            return true;
         } catch (Exception e) {
-            return selfPass.get();
+            return false;
         }
     }
 }
