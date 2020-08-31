@@ -1,12 +1,8 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -14,14 +10,10 @@ public class MultiThreadServiceDataProcessor {
     // 处理数据的远程服务
     private final RemoteService remoteService;
 
-    private final ExecutorService executorService;
-
     public MultiThreadServiceDataProcessor(int threadNumber, RemoteService remoteService) {
         this.threadNumber = threadNumber;
         this.remoteService = remoteService;
-        executorService = Executors.newFixedThreadPool(threadNumber);
     }
-
 
     // 将所有数据发送至远程服务处理。若所有数据都处理成功（没有任何异常抛出），返回true；
     // 否则只要有任何异常产生，返回false
@@ -32,15 +24,16 @@ public class MultiThreadServiceDataProcessor {
                         : allData.size() / threadNumber + 1;
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
 
-        List<Future<Object>> futures = new ArrayList<>();
-        for (List<Object> dataGroup : dataGroups) {
-            final Future<Object> future = executorService.submit(new RemoteTask(remoteService, dataGroup));
-            futures.add(future);
-        }
-
         try {
-            for (Future<Object> future : futures) {
-                future.get();
+            List<Thread> threads = new ArrayList<>();
+            for (List<Object> dataGroup : dataGroups) {
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                thread.start();
+                threads.add(thread);
+            }
+
+            for (Thread thread : threads) {
+                thread.join();
             }
             return true;
         } catch (Exception e) {
