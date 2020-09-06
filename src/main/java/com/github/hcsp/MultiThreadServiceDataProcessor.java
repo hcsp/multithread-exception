@@ -3,7 +3,6 @@ package com.github.hcsp;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.FutureTask;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -27,21 +26,14 @@ public class MultiThreadServiceDataProcessor {
 
         try {
             List<Thread> threads = new ArrayList<>();
-            List<FutureTask<Object>> tasks = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                // () -> dataGroup.forEach(remoteService::processData)
-                FutureTask<Object> task = new FutureTask<>(() -> {
-                    dataGroup.forEach(remoteService::processData);
-                    return null;
-                });
-                Thread thread = new Thread(task);
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
                 thread.start();
                 threads.add(thread);
-                tasks.add(task);
             }
-            for (int i = 0; i < threads.size(); i++) {
-                tasks.get(i).get();
-                threads.get(i).join();
+
+            for (Thread thread : threads) {
+                thread.join();
             }
             return true;
         } catch (Exception e) {
