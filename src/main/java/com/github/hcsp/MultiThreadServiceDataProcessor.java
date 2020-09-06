@@ -3,7 +3,6 @@ package com.github.hcsp;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
 public class MultiThreadServiceDataProcessor {
@@ -34,7 +33,7 @@ public class MultiThreadServiceDataProcessor {
                 FutureTask<Object> task = new FutureTask<>(() -> {
                     dataGroup.forEach(remoteService::processData);
                     return null;
-                }) ;
+                });
                 Thread thread = new Thread(task);
                 thread.start();
                 threads.add(thread);
