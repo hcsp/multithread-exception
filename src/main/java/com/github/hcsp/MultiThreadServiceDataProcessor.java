@@ -1,6 +1,7 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,11 +30,10 @@ public class MultiThreadServiceDataProcessor {
         try {
             List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Thread thread = new Thread(() ->
-                {
-                    try{
+                Thread thread = new Thread(() -> {
+                    try {
                         dataGroup.forEach(remoteService::processData);
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         ok = false;
                     }
                 });
