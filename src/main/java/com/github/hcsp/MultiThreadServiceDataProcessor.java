@@ -1,6 +1,7 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,7 +35,7 @@ public class MultiThreadServiceDataProcessor {
                     try {
                         dataGroup.forEach(remoteService::processData);
 
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         status.set(false);
                     }
                 });
