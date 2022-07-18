@@ -45,7 +45,7 @@ public class MultiThreadServiceDataProcessor {
         private final List<Object> data;
         private final RemoteService remoteService;
 
-        public Temp(List<Object> data, RemoteService remoteService) {
+        Temp(List<Object> data, RemoteService remoteService) {
             this.data = data;
             this.remoteService = remoteService;
         }
