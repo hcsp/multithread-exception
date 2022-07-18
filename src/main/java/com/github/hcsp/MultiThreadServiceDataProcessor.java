@@ -1,12 +1,8 @@
 package com.github.hcsp;
 
 import com.google.common.collect.Lists;
-
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class MultiThreadServiceDataProcessor {
     // 线程数量
@@ -27,33 +23,21 @@ public class MultiThreadServiceDataProcessor {
                         ? allData.size() / threadNumber
                         : allData.size() / threadNumber + 1;
         List<List<Object>> dataGroups = Lists.partition(allData, groupSize);
-        ExecutorService executorService = Executors.newFixedThreadPool(dataGroups.size());
 
         try {
+            List<Thread> threads = new ArrayList<>();
             for (List<Object> dataGroup : dataGroups) {
-                Future<Object> submit = executorService.submit(new Temp(dataGroup, remoteService));
-                submit.get();
+                Thread thread = new Thread(() -> dataGroup.forEach(remoteService::processData));
+                thread.start();
+                threads.add(thread);
             }
 
+            for (Thread thread : threads) {
+                thread.join();
+            }
             return true;
         } catch (Exception e) {
             return false;
-        }
-    }
-
-    private static class Temp implements Callable<Object> {
-        private final List<Object> data;
-        private final RemoteService remoteService;
-
-        Temp(List<Object> data, RemoteService remoteService) {
-            this.data = data;
-            this.remoteService = remoteService;
-        }
-
-        @Override
-        public Object call() {
-            data.forEach(remoteService::processData);
-            return null;
         }
     }
 }
